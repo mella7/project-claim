@@ -1,6 +1,6 @@
 # Build on the machine's own architecture and cross-compile for the target.
 # That keeps multi-arch builds fast, because nothing runs under emulation.
-FROM --platform=$BUILDPLATFORM golang:1.24 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.27 AS builder
 ARG TARGETOS
 ARG TARGETARCH
 WORKDIR /workspace
