@@ -9,7 +9,7 @@ A team writes one small `ProjectClaim`. The operator creates the namespace with 
 
 ![A claim becomes a namespace, a deleted quota comes back, and a second project waits for budget](docs/demo.gif)
 
-*A real session against the operator, recorded with [hack/record-demo.py](hack/record-demo.py). Only the typing is simulated.*
+*A real session against the operator.*
 
 ```yaml
 apiVersion: platform.mella7.me/v1alpha1
