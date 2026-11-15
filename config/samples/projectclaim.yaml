@@ -1,0 +1,19 @@
+apiVersion: platform.mella7.me/v1alpha1
+kind: ProjectClaim
+metadata:
+  name: payments-staging
+spec:
+  projectName: payments-staging
+  tenantRef:
+    name: payments
+  tier: standard
+  description: Payments team staging
+  access:
+    requester: alice@example.com
+    editorGroups: [payments-devs]
+    viewerGroups: [auditors]
+  # Only pods is raised. Everything else comes from the tier.
+  quota:
+    pods: "60"
+  extraLabels:
+    cost-center: cc-4412

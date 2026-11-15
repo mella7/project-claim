@@ -1,0 +1,29 @@
+# Kept so the kubebuilder CLI recognises the layout. The code itself was
+# written by hand, not scaffolded.
+domain: mella7.me
+layout:
+  - go.kubebuilder.io/v4
+projectName: project-claim
+repo: github.com/mella7/project-claim
+resources:
+  - api: {crdVersion: v1}
+    controller: true
+    domain: mella7.me
+    group: platform
+    kind: ProjectClaim
+    path: github.com/mella7/project-claim/api/v1alpha1
+    version: v1alpha1
+  - api: {crdVersion: v1}
+    controller: true
+    domain: mella7.me
+    group: platform
+    kind: Tenant
+    path: github.com/mella7/project-claim/api/v1alpha1
+    version: v1alpha1
+  - api: {crdVersion: v1}
+    domain: mella7.me
+    group: platform
+    kind: ProjectTier
+    path: github.com/mella7/project-claim/api/v1alpha1
+    version: v1alpha1
+version: "3"

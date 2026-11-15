@@ -1,0 +1,9 @@
+# Bind this to whatever scrapes the operator. The metrics endpoint checks
+# every request for permission to GET /metrics.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: projectclaim-metrics-reader
+rules:
+  - nonResourceURLs: ["/metrics"]
+    verbs: ["get"]

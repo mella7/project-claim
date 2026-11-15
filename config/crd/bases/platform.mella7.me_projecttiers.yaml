@@ -1,0 +1,156 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: projecttiers.platform.mella7.me
+spec:
+  group: platform.mella7.me
+  names:
+    categories:
+    - platform
+    kind: ProjectTier
+    listKind: ProjectTierList
+    plural: projecttiers
+    shortNames:
+    - ptier
+    singular: projecttier
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.podSecurity.enforce
+      name: Enforce
+      type: string
+    - jsonPath: .spec.requireNetworkIsolation
+      name: Isolation
+      type: boolean
+    - jsonPath: .spec.defaultTTL
+      name: Default TTL
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          ProjectTier is a named set of defaults for projects: quota, container
+          defaults and the Pod Security level. Changing a tier updates every project
+          that uses it.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ProjectTierSpec defines what projects of this tier get by
+              default.
+            properties:
+              containerDefaults:
+                description: ContainerDefaults becomes the namespace's LimitRange.
+                properties:
+                  limits:
+                    additionalProperties:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      x-kubernetes-int-or-string: true
+                    description: Limits are the default container limits.
+                    type: object
+                  requests:
+                    additionalProperties:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      x-kubernetes-int-or-string: true
+                    description: |-
+                      Requests are the default container requests. A resource that has a
+                      default limit but no default request gets the limit as its request,
+                      which is also what the API server does.
+                    type: object
+                type: object
+              defaultTTL:
+                description: |-
+                  DefaultTTL is the lifetime of claims that do not set their own.
+                  Useful for sandbox tiers that should clean up after themselves.
+                type: string
+              description:
+                description: Description says what the tier is meant for.
+                maxLength: 256
+                type: string
+              podSecurity:
+                default: {}
+                description: PodSecurity sets the Pod Security Admission labels of
+                  the namespace.
+                properties:
+                  audit:
+                    default: restricted
+                    description: Audit records violations of this level in the audit
+                      log.
+                    enum:
+                    - privileged
+                    - baseline
+                    - restricted
+                    type: string
+                  enforce:
+                    default: baseline
+                    description: Enforce rejects pods that violate this level.
+                    enum:
+                    - privileged
+                    - baseline
+                    - restricted
+                    type: string
+                  warn:
+                    default: restricted
+                    description: Warn returns a warning to the client for violations
+                      of this level.
+                    enum:
+                    - privileged
+                    - baseline
+                    - restricted
+                    type: string
+                type: object
+              quota:
+                additionalProperties:
+                  anyOf:
+                  - type: integer
+                  - type: string
+                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                  x-kubernetes-int-or-string: true
+                description: |-
+                  Quota is the default ResourceQuota of the namespace. A claim can
+                  override single entries.
+                type: object
+                x-kubernetes-validations:
+                - message: quota must set at least one resource
+                  rule: size(self) > 0
+              requireNetworkIsolation:
+                description: |-
+                  RequireNetworkIsolation forbids claims of this tier from turning
+                  network isolation off.
+                type: boolean
+            required:
+            - quota
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources: {}

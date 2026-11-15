@@ -1,0 +1,116 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: projectclaim-manager
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - limitranges
+  - namespaces
+  - resourcequotas
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - networkpolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - platform.mella7.me
+  resources:
+  - projectclaims
+  verbs:
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - platform.mella7.me
+  resources:
+  - projectclaims/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - platform.mella7.me
+  resources:
+  - projectclaims/status
+  - tenants/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - platform.mella7.me
+  resources:
+  - projecttiers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - platform.mella7.me
+  resources:
+  - tenants
+  verbs:
+  - administer
+  - get
+  - list
+  - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resourceNames:
+  - admin
+  - edit
+  - view
+  resources:
+  - clusterroles
+  verbs:
+  - bind
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - rolebindings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch

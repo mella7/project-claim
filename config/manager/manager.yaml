@@ -1,0 +1,104 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: projectclaim-system
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: projectclaim-controller-manager
+  namespace: projectclaim-system
+  labels:
+    app.kubernetes.io/name: projectclaim-operator
+spec:
+  # Two replicas for availability, not throughput. Leader election makes one
+  # of them the active one and the other a standby.
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: projectclaim-operator
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: projectclaim-operator
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+    spec:
+      serviceAccountName: projectclaim-controller-manager
+      terminationGracePeriodSeconds: 10
+      securityContext:
+        runAsNonRoot: true
+        # No runAsUser. OpenShift's restricted-v2 SCC assigns a UID from the
+        # namespace's range and rejects a pod that asks for a fixed one.
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: projectclaim-operator
+      containers:
+        - name: manager
+          image: controller:latest
+          args:
+            - --leader-elect
+            - --health-probe-bind-address=:8081
+            - --metrics-bind-address=:8443
+          ports:
+            - name: metrics
+              containerPort: 8443
+            - name: probes
+              containerPort: 8081
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: probes
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: probes
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: projectclaim-metrics
+  namespace: projectclaim-system
+  labels:
+    app.kubernetes.io/name: projectclaim-operator
+spec:
+  selector:
+    app.kubernetes.io/name: projectclaim-operator
+  ports:
+    - name: metrics
+      port: 8443
+      targetPort: metrics
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: projectclaim-controller-manager
+  namespace: projectclaim-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: projectclaim-operator

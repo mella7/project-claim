@@ -1,0 +1,310 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: projectclaims.platform.mella7.me
+spec:
+  group: platform.mella7.me
+  names:
+    categories:
+    - platform
+    kind: ProjectClaim
+    listKind: ProjectClaimList
+    plural: projectclaims
+    shortNames:
+    - pclaim
+    singular: projectclaim
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.namespaceName
+      name: Namespace
+      type: string
+    - jsonPath: .spec.tenantRef.name
+      name: Tenant
+      type: string
+    - jsonPath: .spec.tier
+      name: Tier
+      type: string
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: Ready
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Ready")].reason
+      name: Reason
+      priority: 1
+      type: string
+    - jsonPath: .status.expiresAt
+      name: Expires
+      priority: 1
+      type: date
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          ProjectClaim requests a namespace with quota, container defaults, role
+          bindings, Pod Security labels and network isolation, managed as one unit.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ProjectClaimSpec is the desired state of a ProjectClaim.
+            properties:
+              access:
+                description: Access lists who gets which role inside the namespace.
+                properties:
+                  editorGroups:
+                    description: EditorGroups are bound to the edit ClusterRole in
+                      the namespace.
+                    items:
+                      type: string
+                    maxItems: 32
+                    type: array
+                    x-kubernetes-list-type: set
+                  requester:
+                    description: |-
+                      Requester is the user bound to the admin ClusterRole in the namespace.
+                      It is also written to the openshift.io/requester annotation.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  viewerGroups:
+                    description: ViewerGroups are bound to the view ClusterRole in
+                      the namespace.
+                    items:
+                      type: string
+                    maxItems: 32
+                    type: array
+                    x-kubernetes-list-type: set
+                required:
+                - requester
+                type: object
+              description:
+                description: Description is shown as the OpenShift project description.
+                maxLength: 256
+                type: string
+              extraLabels:
+                additionalProperties:
+                  type: string
+                description: |-
+                  ExtraLabels are added to the namespace. Labels owned by the operator
+                  and Pod Security labels cannot be set this way.
+                maxProperties: 16
+                type: object
+                x-kubernetes-validations:
+                - message: extraLabels must not use label keys reserved for the operator,
+                    Kubernetes, OpenShift or Pod Security
+                  rule: self.all(k, !k.startsWith('platform.mella7.me/') && !k.startsWith('pod-security.kubernetes.io/')
+                    && !k.startsWith('kubernetes.io/') && !k.startsWith('openshift.io/')
+                    && k != 'app.kubernetes.io/managed-by')
+              networkIsolation:
+                default: true
+                description: |-
+                  NetworkIsolation installs a NetworkPolicy that only admits traffic from
+                  the namespace itself and from the cluster's ingress and monitoring
+                  namespaces. Defaults to true. A tier can forbid turning it off.
+                type: boolean
+              projectName:
+                description: |-
+                  ProjectName is the name of the namespace to provision. It cannot be
+                  changed after creation: a rename would orphan the namespace that
+                  already exists.
+                maxLength: 63
+                minLength: 2
+                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                type: string
+                x-kubernetes-validations:
+                - message: projectName is immutable
+                  rule: self == oldSelf
+                - message: projectName must not use a reserved name or the kube- and
+                    openshift- prefixes
+                  rule: '!self.startsWith(''kube-'') && !self.startsWith(''openshift-'')
+                    && !(self in [''default'', ''openshift''])'
+              quota:
+                additionalProperties:
+                  anyOf:
+                  - type: integer
+                  - type: string
+                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                  x-kubernetes-int-or-string: true
+                description: |-
+                  Quota overrides individual entries of the tier's quota. Keys that are
+                  not listed here keep the tier's value.
+                type: object
+              reclaimPolicy:
+                default: Delete
+                description: |-
+                  ReclaimPolicy decides what happens to the namespace when the claim is
+                  deleted. Delete removes it, Retain keeps it and detaches it.
+                enum:
+                - Delete
+                - Retain
+                type: string
+              tenantRef:
+                description: |-
+                  TenantRef is the Tenant this project belongs to. The project's quota
+                  counts against that tenant's budget. Immutable.
+                properties:
+                  name:
+                    description: Name of the Tenant.
+                    maxLength: 63
+                    minLength: 1
+                    type: string
+                required:
+                - name
+                type: object
+                x-kubernetes-validations:
+                - message: tenantRef is immutable
+                  rule: self == oldSelf
+              tier:
+                description: |-
+                  Tier is the name of the ProjectTier that supplies default quota,
+                  container defaults and the Pod Security level.
+                maxLength: 63
+                minLength: 1
+                type: string
+              ttl:
+                description: |-
+                  TTL limits the lifetime of the project, counted from the claim's
+                  creation. When it runs out the claim deletes itself. If unset, the
+                  tier's defaultTTL applies, if it has one.
+                type: string
+            required:
+            - access
+            - projectName
+            - tenantRef
+            - tier
+            type: object
+          status:
+            description: ProjectClaimStatus is the observed state of a ProjectClaim.
+            properties:
+              appliedQuota:
+                additionalProperties:
+                  anyOf:
+                  - type: integer
+                  - type: string
+                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                  x-kubernetes-int-or-string: true
+                description: |-
+                  AppliedQuota is the quota currently enforced in the namespace: the tier
+                  defaults with this claim's overrides merged in.
+                type: object
+              conditions:
+                description: Conditions holds the Admitted and Ready conditions.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              expiresAt:
+                description: ExpiresAt is when the claim deletes itself, if it has
+                  a lifetime.
+                format: date-time
+                type: string
+              namespaceName:
+                description: |-
+                  NamespaceName is the namespace this claim owns. Empty until the
+                  namespace has been created or adopted.
+                type: string
+              observedGeneration:
+                description: ObservedGeneration is the spec generation the status
+                  describes.
+                format: int64
+                type: integer
+              phase:
+                description: Phase is a one-word summary for `kubectl get`.
+                enum:
+                - Pending
+                - Provisioning
+                - Ready
+                - Degraded
+                - Failed
+                - Terminating
+                type: string
+            type: object
+        required:
+        - spec
+        type: object
+        x-kubernetes-validations:
+        - message: metadata.name must be at most 63 characters, because it is used
+            as a label value
+          rule: size(self.metadata.name) <= 63
+    served: true
+    storage: true
+    subresources:
+      status: {}

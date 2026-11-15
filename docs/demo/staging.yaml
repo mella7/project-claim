@@ -1,0 +1,11 @@
+apiVersion: platform.mella7.me/v1alpha1
+kind: ProjectClaim
+metadata:
+  name: payments-staging
+spec:
+  projectName: payments-staging
+  tenantRef: {name: payments}
+  tier: standard
+  access:
+    requester: alice@example.com
+    editorGroups: [payments-devs]

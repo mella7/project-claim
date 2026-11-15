@@ -1,0 +1,181 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: tenants.platform.mella7.me
+spec:
+  group: platform.mella7.me
+  names:
+    categories:
+    - platform
+    kind: Tenant
+    listKind: TenantList
+    plural: tenants
+    singular: tenant
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.projectCount
+      name: Projects
+      type: integer
+    - jsonPath: .spec.maxProjects
+      name: Max
+      type: integer
+    - jsonPath: .status.allocated.requests\.cpu
+      name: CPU Used
+      type: string
+    - jsonPath: .spec.quotaBudget.requests\.cpu
+      name: CPU Budget
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          Tenant is a team or customer that owns projects. It carries the budget all
+          of its projects share and the rules its claims have to follow.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: TenantSpec defines the limits a team's projects have to fit
+              into.
+            properties:
+              allowedTiers:
+                description: |-
+                  AllowedTiers restricts which ProjectTiers the tenant may use.
+                  Empty means any tier.
+                items:
+                  type: string
+                maxItems: 32
+                type: array
+                x-kubernetes-list-type: set
+              displayName:
+                description: DisplayName is a human-readable name for the tenant.
+                maxLength: 128
+                type: string
+              maxProjects:
+                description: MaxProjects caps the number of projects. Unset means
+                  no cap.
+                format: int32
+                minimum: 0
+                type: integer
+              namespacePrefix:
+                description: |-
+                  NamespacePrefix, if set, must prefix the projectName of every claim of
+                  this tenant. It keeps tenants out of each other's names.
+                maxLength: 40
+                pattern: ^[a-z0-9]([-a-z0-9]*)?$
+                type: string
+              ownerGroups:
+                description: OwnerGroups are groups whose members count as owners.
+                items:
+                  type: string
+                maxItems: 64
+                type: array
+                x-kubernetes-list-type: set
+              owners:
+                description: |-
+                  Owners are the users allowed to create and change claims of this
+                  tenant. Enforced at admission by the ValidatingAdmissionPolicy that
+                  ships with the operator.
+                items:
+                  type: string
+                maxItems: 64
+                type: array
+                x-kubernetes-list-type: set
+              quotaBudget:
+                additionalProperties:
+                  anyOf:
+                  - type: integer
+                  - type: string
+                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                  x-kubernetes-int-or-string: true
+                description: |-
+                  QuotaBudget caps the sum of the quotas of all the tenant's projects,
+                  per resource. A claim is only admitted while the sum stays within the
+                  budget. Resources that are not listed are not budgeted.
+                type: object
+            type: object
+          status:
+            description: TenantStatus is the budget ledger of a tenant.
+            properties:
+              allocated:
+                additionalProperties:
+                  anyOf:
+                  - type: integer
+                  - type: string
+                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                  x-kubernetes-int-or-string: true
+                description: Allocated is the sum of all reservations.
+                type: object
+              observedGeneration:
+                description: ObservedGeneration is the spec generation the status
+                  describes.
+                format: int64
+                type: integer
+              projectCount:
+                description: ProjectCount is the number of projects holding a reservation.
+                format: int32
+                type: integer
+              reservations:
+                description: |-
+                  Reservations lists what each claim holds. Claims reserve here before
+                  they create anything. The write is guarded by the object's
+                  resourceVersion, so two claims competing for the last of the budget
+                  cannot both get it.
+                items:
+                  description: Reservation records the quota one claim holds against
+                    the tenant budget.
+                  properties:
+                    claimName:
+                      description: ClaimName is the name of the ProjectClaim.
+                      type: string
+                    claimUID:
+                      description: |-
+                        ClaimUID pins the reservation to one incarnation of the claim, so a
+                        claim that is deleted and recreated under the same name does not
+                        inherit it.
+                      type: string
+                    quota:
+                      additionalProperties:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      description: Quota is the reserved amount.
+                      type: object
+                  required:
+                  - claimName
+                  - claimUID
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - claimName
+                x-kubernetes-list-type: map
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

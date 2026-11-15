@@ -1,0 +1,14 @@
+# Bind this to the people who should be able to request projects. It only
+# opens the API. Which tenant a user may write claims for is decided by the
+# tenant ownership admission policy, from the owners listed on each Tenant.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: projectclaim-author
+rules:
+  - apiGroups: ["platform.mella7.me"]
+    resources: ["projectclaims"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["platform.mella7.me"]
+    resources: ["projecttiers", "tenants"]
+    verbs: ["get", "list", "watch"]

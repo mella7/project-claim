@@ -1,0 +1,52 @@
+# Three tiers a platform team might start with.
+apiVersion: platform.mella7.me/v1alpha1
+kind: ProjectTier
+metadata:
+  name: sandbox
+spec:
+  description: Short-lived space for experiments. Cleans up after three days.
+  defaultTTL: 72h
+  quota:
+    requests.cpu: "1"
+    requests.memory: 2Gi
+    limits.cpu: "2"
+    limits.memory: 4Gi
+    pods: "10"
+  containerDefaults:
+    limits: {cpu: 250m, memory: 256Mi}
+    requests: {cpu: 25m, memory: 64Mi}
+---
+apiVersion: platform.mella7.me/v1alpha1
+kind: ProjectTier
+metadata:
+  name: standard
+spec:
+  description: Development and staging workloads.
+  quota:
+    requests.cpu: "4"
+    requests.memory: 8Gi
+    limits.cpu: "8"
+    limits.memory: 16Gi
+    pods: "40"
+  containerDefaults:
+    limits: {cpu: 500m, memory: 512Mi}
+    requests: {cpu: 50m, memory: 128Mi}
+---
+apiVersion: platform.mella7.me/v1alpha1
+kind: ProjectTier
+metadata:
+  name: production
+spec:
+  description: Production workloads. Restricted pods, isolation cannot be turned off.
+  requireNetworkIsolation: true
+  podSecurity:
+    enforce: restricted
+  quota:
+    requests.cpu: "16"
+    requests.memory: 32Gi
+    limits.cpu: "32"
+    limits.memory: 64Gi
+    pods: "150"
+  containerDefaults:
+    limits: {cpu: "1", memory: 1Gi}
+    requests: {cpu: 100m, memory: 256Mi}

@@ -1,0 +1,23 @@
+# What the platform team sets up once: a tier and a tenant with a budget.
+apiVersion: platform.mella7.me/v1alpha1
+kind: ProjectTier
+metadata:
+  name: standard
+spec:
+  quota:
+    requests.cpu: "4"
+    requests.memory: 8Gi
+    pods: "40"
+  containerDefaults:
+    limits: {cpu: 500m, memory: 512Mi}
+    requests: {cpu: 50m, memory: 128Mi}
+---
+apiVersion: platform.mella7.me/v1alpha1
+kind: Tenant
+metadata:
+  name: payments
+spec:
+  owners: [alice@example.com]
+  namespacePrefix: payments-
+  quotaBudget:
+    requests.cpu: "6"

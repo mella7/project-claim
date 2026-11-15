@@ -1,0 +1,20 @@
+# Needs the Prometheus Operator CRDs, which OpenShift ships. The scraper's
+# service account also needs the projectclaim-metrics-reader ClusterRole.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: projectclaim-operator
+  namespace: projectclaim-system
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: projectclaim-operator
+  endpoints:
+    - port: metrics
+      scheme: https
+      path: /metrics
+      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      tlsConfig:
+        # The endpoint serves a self-signed certificate unless one is mounted.
+        # On OpenShift, have the service CA issue one and verify it instead.
+        insecureSkipVerify: true

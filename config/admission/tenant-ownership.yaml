@@ -1,0 +1,59 @@
+# Only a tenant's owners may create or change claims that are billed to it.
+#
+# A controller cannot enforce this: by the time it sees an object, the
+# identity of whoever wrote it is gone. Admission is the only place that
+# knows. This policy does the check in the API server itself, in CEL, so
+# there is no webhook to deploy, no serving certificate to rotate and nothing
+# that can be down when a claim is written.
+#
+# How it works: the binding selects every Tenant as a parameter, so the
+# expression runs once per Tenant. It passes right away for tenants the claim
+# does not reference, and for the one it does reference it requires the
+# caller to be an owner.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: projectclaim-tenant-ownership
+spec:
+  failurePolicy: Fail
+  paramKind:
+    apiVersion: platform.mella7.me/v1alpha1
+    kind: Tenant
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["platform.mella7.me"]
+        apiVersions: ["*"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["projectclaims"]
+  variables:
+    - name: isOwner
+      expression: >-
+        (has(params.spec.owners) && request.userInfo.username in params.spec.owners) ||
+        (has(params.spec.ownerGroups) && has(request.userInfo.groups) &&
+        request.userInfo.groups.exists(g, g in params.spec.ownerGroups))
+    # Platform admins and the operator itself are not listed by name. Whoever
+    # holds the "administer" verb on tenants is let through, which keeps the
+    # decision in RBAC where it can be audited and changed without touching
+    # this policy. cluster-admin holds every verb, so it qualifies as is.
+    - name: isAdmin
+      expression: >-
+        authorizer.group('platform.mella7.me').resource('tenants').name(params.metadata.name).check('administer').allowed()
+  validations:
+    - expression: >-
+        object.spec.tenantRef.name != params.metadata.name || variables.isOwner || variables.isAdmin
+      messageExpression: >-
+        'user "' + request.userInfo.username + '" is not an owner of tenant "' + params.metadata.name + '"'
+      reason: Forbidden
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: projectclaim-tenant-ownership
+spec:
+  policyName: projectclaim-tenant-ownership
+  validationActions: ["Deny"]
+  paramRef:
+    selector: {}
+    # A claim that names a tenant which does not exist is let in here and
+    # then held as Pending by the controller with reason TenantNotFound.
+    parameterNotFoundAction: Allow

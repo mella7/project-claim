@@ -1,0 +1,51 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: standard
+  enable:
+    - bodyclose
+    - copyloopvar
+    - dupword
+    - errorlint
+    - gocritic
+    - gosec
+    - misspell
+    - nakedret
+    - nilerr
+    - nolintlint
+    - revive
+    - unconvert
+    - unparam
+    - whitespace
+  settings:
+    revive:
+      rules:
+        - name: exported
+          disabled: true
+        - name: package-comments
+          disabled: true
+        # Ginkgo and Gomega are meant to be dot-imported.
+        - name: dot-imports
+          arguments:
+            - allowedPackages:
+                - github.com/onsi/ginkgo/v2
+                - github.com/onsi/gomega
+  exclusions:
+    generated: strict
+    rules:
+      - path: _test\.go
+        linters:
+          - gosec
+          - unparam
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/mella7/project-claim

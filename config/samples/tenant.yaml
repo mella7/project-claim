@@ -1,0 +1,16 @@
+apiVersion: platform.mella7.me/v1alpha1
+kind: Tenant
+metadata:
+  name: payments
+spec:
+  displayName: Payments team
+  owners:
+    - alice@example.com
+  ownerGroups:
+    - payments-leads
+  allowedTiers: [sandbox, standard, production]
+  namespacePrefix: payments-
+  maxProjects: 10
+  quotaBudget:
+    requests.cpu: "24"
+    requests.memory: 48Gi
